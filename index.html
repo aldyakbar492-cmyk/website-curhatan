@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Langit Curhatan - Full Immersive Edition</title>
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at bottom, #0b1026, #02030a 80%);
+    overflow: hidden;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    color: white;
+    position: relative;
+    perspective: 1000px; /* Tambahan untuk depth */
+  }
+
+  /* Wadah Langit dengan transisi transform untuk Parallax */
+  #space-container {
+    position: absolute;
+    inset: -100px; 
+    z-index: 1;
+    transition: transform 0.2s ease-out; /* Untuk efek mouse parallax */
+  }
+
+  /* Efek Hujan Visual */
+  .rain-drop {
+    position: absolute;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.4));
+    width: 1px;
+    height: 40px;
+    pointer-events: none;
+    animation: fall linear infinite;
+    z-index: 3;
+  }
+  @keyframes fall { to { transform: translateY(110vh); } }
+
+  /* Layar Splash Awal */
+  #welcome-screen {
+    position: fixed;
+    inset: 0;
+    background: #02030a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    text-align: center;
+    transition: opacity 1s;
+  }
+
+  /* Global Loading Overlay */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 3, 10, 0.95);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    text-align: center;
+    padding: 30px;
+  }
+
+  #typing-text {
+    font-size: 1.3rem;
+    font-style: italic;
+    min-height: 1.5em;
+    max-width: 85%;
+    line-height: 1.6;
+  }
+
+  #typing-text::after {
+    content: "|";
+    animation: blink 0.7s infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Bintang Terbang Dinamis */
+  .flying-star {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    z-index: 5000;
+    pointer-events: none;
+  }
+
+  /* Efek Bintang Jatuh */
+  .shooting-star {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: linear-gradient(to right, transparent, white, transparent);
+    box-shadow: 0 0 15px 5px white;
+    border-radius: 50%;
+    animation: shoot 4s linear infinite;
+    opacity: 0;
+    z-index: 2;
+  }
+
+  @keyframes shoot {
+    0% { transform: translate(-100vw, -10vh) rotate(-45deg); opacity: 0; }
+    10% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translate(100vw, 110vh) rotate(-45deg); opacity: 0; }
+  }
+
+  .hug-particle {
+    position: absolute;
+    background: linear-gradient(45deg, #ffcc88, #a777e3);
+    border-radius: 50%;
+    animation: fadeOutAndFloat 1.5s forwards;
+    pointer-events: none;
+  }
+
+  @keyframes fadeOutAndFloat {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(1.5) translateY(-20px); opacity: 0; }
+  }
+
+  .start-btn {
+    padding: 15px 40px;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 18px;
+    box-shadow: 0 0 30px rgba(110, 142, 251, 0.4);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  #music-visualizer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    gap: 3px;
+    z-index: 1000;
+  }
+
+  .bar {
+    width: 3px;
+    height: 15px;
+    background: #a777e3;
+    animation: barBounce 0.5s ease-in-out infinite alternate;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    animation: twinkleAndPulse 4s infinite alternate ease-in-out;
+    z-index: 5;
+    transition: transform 0.3s;
+  }
+
+  .star:hover {
+    transform: translate(-50%, -50%) scale(2.5);
+    filter: brightness(1.2);
+  }
+
+  @keyframes twinkleAndPulse {
+    0% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.9); }
+  }
+
+  /* Atmosfir UI */
+  #atmosphere-switch {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 8px 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  #atmosphere-switch button {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 10px;
+  }
+
+  #atmosphere-switch button.active {
+    background: #a777e3;
+    color: white;
+  }
+
+  /* MODIFIKASI PANEL: Menambahkan transisi untuk fitur Close */
+  .panel {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    padding: 15px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    z-index: 100;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* Class untuk menyembunyikan panel */
+  .panel.hidden {
+    bottom: -500px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* TOMBOL BARU: Toggle untuk Buka/Tutup */
+  #toggle-panel-btn {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 150;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s;
+  }
+  #toggle-panel-btn:hover { transform: scale(1.1); }
+
+  /* Dropdown Emosi Baru */
+  select#emosi {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+    outline: none;
+    font-family: inherit;
+  }
+
+  input, textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    outline: none;
+    color: #1a1a1a;
+  }
+
+  .btn-send {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+
+  .popup {
+    background: #161b33;
+    padding: 25px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
+    border: 1px solid #4a5568;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #popup-content {
+    font-style: italic;
+    color: #ccc;
+    line-height: 1.6;
+    word-wrap: break-word;
+    overflow-y: auto;
+    margin: 15px 0;
+    padding-right: 5px;
+    max-height: 400px;
+  }
+  
+  .btn-delete { background: none; border: 1px solid #ff5e5e; color: #ff5e5e; padding: 6px 12px; border-radius: 10px; cursor: pointer; margin-top: 15px; }
+  .btn-hug { background: linear-gradient(135deg, #ffcc88, #a777e3); color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; margin-top: 10px; }
+</style>
+</head>
+
+<body>
+
+<div id="welcome-screen">
+  <h1 style="font-weight: 300; letter-spacing: 2px;">LANGIT CURHATAN</h1>
+  <p style="color: #888; margin-bottom: 30px;">Sunyi. Tenang. Abadi.</p>
+  <button class="start-btn" onclick="startSequence()">MASUK & DENGARKAN</button>
+</div>
+
+<div id="space-container"></div>
+<div id="rain-container"></div> 
+
+<div id="loading-overlay">
+  <div id="typing-text"></div>
+</div>
+
+<audio id="bgMusic" loop preload="auto">
+  <source id="musicSource" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3" type="audio/mpeg">
+</audio>
+
+<div id="music-visualizer">
+  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+</div>
+
+<div id="atmosphere-switch">
+  <button id="btn-music1" class="active" onclick="changeAtmosphere('default')">Galaksi</button>
+  <button id="btn-music2" onclick="changeAtmosphere('rain')">Hujan</button>
+  <button id="btn-music3" onclick="changeAtmosphere('ambient')">Sunyi</button>
+</div>
+
+<button id="toggle-panel-btn" onclick="togglePanelVisibility()">
+  <span id="toggle-icon">✎</span>
+</button>
+
+<div class="panel" id="main-panel">
+  <div style="text-align: right; margin-bottom: 5px;">
+    <button onclick="togglePanelVisibility()" style="background: none; border: none; color: #ff5e5e; cursor: pointer; font-size: 12px;">[Tutup]</button>
+  </div>
+  
+  <select id="emosi">
+    <option value="#ffffff">Perasaan: Netral (Putih)</option>
+    <option value="#ffeb3b">Perasaan: Senang (Kuning)</option>
+    <option value="#ff5252">Perasaan: Lelah/Marah (Merah)</option>
+    <option value="#80d8ff">Perasaan: Sedih (Biru)</option>
+    <option value="#b388ff">Perasaan: Rindu (Ungu)</option>
+  </select>
+  <input type="text" id="tujuan" placeholder="Pesan ini untuk siapa?">
+  <textarea id="curhat" placeholder="Tumpahkan perasaanmu di sini..."></textarea>
+  <button class="btn-send" id="btn-send" onclick="sendSequence()">Terbangkan ke Bintang</button>
+</div>
+
+<div id="overlay" class="overlay" onclick="closePopup()">
+  <div class="popup" onclick="event.stopPropagation()">
+    <span style="color: #a777e3; font-size: 11px; letter-spacing: 2px;">DITUJUKAN UNTUK:</span>
+    <h3 id="popup-receiver" style="margin: 5px 0 10px 0; color: #fff;"></h3>
+    <div id="popup-content"></div>
+    <button class="btn-hug" onclick="sendHug()">Kirim Pelukan</button>
+    <button class="btn-delete" onclick="deleteOneStar()">Hapus Bintang</button>
+  </div>
+</div>
+
+<script>
+  let starsData = JSON.parse(localStorage.getItem("langit_stars_v2") || "[]");
+  let selectedIndex = null;
+  let rainInterval = null;
+  const music = document.getElementById("bgMusic");
+  const musicSource = document.getElementById("musicSource");
+  const container = document.getElementById("space-container");
+
+  // FUNGSI BARU: Toggle Panel
+  function togglePanelVisibility() {
+    const panel = document.getElementById("main-panel");
+    const icon = document.getElementById("toggle-icon");
+    const isHidden = panel.classList.toggle("hidden");
+    icon.innerText = isHidden ? "✎" : "✖";
+  }
+
+  const audioTracks = {
+    'default': "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3",
+    'rain': "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", 
+    'ambient': "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" 
+  };
+
+  const sendQuotes = [
+    { text: "Melepaskan bebanmu ke angkasa...", color: "#a777e3", speed: "2.5s", glow: "#6e8efb" },
+    { text: "Biarkan bintang mendekap rahasiamu pelan-pelan.", color: "#88ccff", speed: "4s", glow: "#ffffff" },
+    { text: "Satu bintang lagi lahir dari sebuah keberanian.", color: "#ffcc88", speed: "1.5s", glow: "#ffaa00" },
+    { text: "Tenanglah, pesanmu kini abadi di pelukan malam.", color: "#ffffff", speed: "3s", glow: "#a777e3" }
+  ];
+
+  document.addEventListener('mousemove', (e) => {
+    const x = (window.innerWidth / 2 - e.pageX) / 50;
+    const y = (window.innerHeight / 2 - e.pageY) / 50;
+    container.style.transform = `translateX(${x}px) translateY(${y}px)`;
+  });
+
+  function runTypingEffect(quoteObj, callback) {
+    const overlay = document.getElementById("loading-overlay");
+    const typingBox = document.getElementById("typing-text");
+    overlay.style.display = "flex";
+    typingBox.innerText = "";
+    typingBox.style.color = quoteObj.color || "#a777e3";
+    typingBox.style.textShadow = `0 0 10px ${quoteObj.glow || 'rgba(167, 119, 227, 0.5)'}`; 
+    let i = 0;
+    function type() {
+      if (i < quoteObj.text.length) {
+        typingBox.innerText += quoteObj.text.charAt(i);
+        i++;
+        setTimeout(type, 60);
+      } else {
+        setTimeout(() => {
+          overlay.style.display = "none";
+          if (callback) callback(quoteObj);
+        }, 1500);
+      }
+    }
+    type();
+  }
+
+  function startSequence() {
+    music.play().catch(e => console.log("Autoplay musik gagal:", e));
+    document.getElementById("music-visualizer").style.display = "flex";
+    document.getElementById("welcome-screen").style.opacity = "0";
+    setTimeout(() => {
+      document.getElementById("welcome-screen").style.display = "none";
+      runTypingEffect({text: "Rebahkan lelahmu, biarkan semesta menjagamu...", color: "#a777e3", glow: "#6e8efb"});
+    }, 800);
+    renderStars();
+  }
+
+  function sendSequence() {
+    const text = document.getElementById("curhat").value.trim();
+    if (!text) return;
+    const randomQuote = sendQuotes[Math.floor(Math.random() * sendQuotes.length)];
+    runTypingEffect(randomQuote, (q) => {
+      animateStarFlight(q);
+      togglePanelVisibility(); // Otomatis tutup panel setelah kirim
+    });
+  }
+
+  function animateStarFlight(quote) {
+    const btn = document.getElementById("btn-send");
+    const rect = btn.getBoundingClientRect();
+    const targetX = Math.random() * 90 + 5;
+    const targetY = Math.random() * 60 + 5;
+    const color = document.getElementById("emosi").value;
+
+    const flyingStar = document.createElement("div");
+    flyingStar.className = "flying-star";
+    flyingStar.style.left = (rect.left + rect.width/2) + "px";
+    flyingStar.style.top = (rect.top) + "px";
+    flyingStar.style.background = color;
+    flyingStar.style.boxShadow = `0 0 20px 5px ${color}, 0 0 40px 10px ${quote.glow}`;
+    flyingStar.style.transition = `all ${quote.speed} cubic-bezier(0.2, 0, 0.2, 1)`;
+    document.body.appendChild(flyingStar);
+
+    setTimeout(() => {
+      flyingStar.style.left = targetX + "vw";
+      flyingStar.style.top = targetY + "vh";
+      flyingStar.style.transform = "scale(0.3)";
+    }, 50);
+
+    setTimeout(() => {
+      saveCurhat(targetX, targetY, color);
+      flyingStar.remove();
+    }, parseFloat(quote.speed) * 1000);
+  }
+
+  function saveCurhat(x, y, color) {
+    const inputPesan = document.getElementById("curhat");
+    const inputTujuan = document.getElementById("tujuan");
+    starsData.push({
+      text: inputPesan.value,
+      to: inputTujuan.value,
+      x: x.toFixed(2),
+      y: y.toFixed(2),
+      color: color,
+      size: Math.random() * 4 + 3
+    });
+    localStorage.setItem("langit_stars_v2", JSON.stringify(starsData));
+    inputPesan.value = "";
+    inputTujuan.value = "";
+    renderStars();
+  }
+
+  function renderStars() {
+    container.innerHTML = ""; 
+    starsData.forEach((starObj, index) => {
+      const star = document.createElement("div");
+      star.className = "star";
+      star.style.left = starObj.x + "%";
+      star.style.top = starObj.y + "%";
+      star.style.width = (starObj.size || 5) + "px";
+      star.style.height = (starObj.size || 5) + "px";
+      star.style.backgroundColor = starObj.color || "white";
+      star.style.boxShadow = `0 0 8px ${starObj.color || 'white'}`;
+      star.style.animationDelay = (Math.random() * 4) + "s";
+      
+      star.onclick = (e) => {
+        e.stopPropagation();
+        selectedIndex = index;
+        document.getElementById("popup-receiver").innerText = starObj.to || "Seseorang";
+        document.getElementById("popup-content").innerText = `“${starObj.text}”`;
+        document.getElementById("overlay").style.display = "flex";
+      };
+      container.appendChild(star);
+    });
+  }
+
+  function changeAtmosphere(trackName) {
+    changeMusic(trackName);
+    const rainContainer = document.getElementById("rain-container");
+    clearInterval(rainInterval);
+    rainContainer.innerHTML = "";
+
+    if(trackName === 'rain') {
+      rainInterval = setInterval(() => {
+        const drop = document.createElement("div");
+        drop.className = "rain-drop";
+        drop.style.left = Math.random() * 100 + "vw";
+        drop.style.animationDuration = (Math.random() * 0.5 + 0.4) + "s";
+        rainContainer.appendChild(drop);
+        setTimeout(() => drop.remove(), 1000);
+      }, 50);
+    }
+  }
+
+  function changeMusic(trackName) {
+    music.pause();
+    musicSource.src = audioTracks[trackName];
+    music.load();
+    music.play().catch(e => console.log("Gagal memutar musik:", e));
+    document.querySelectorAll('#atmosphere-switch button').forEach((btn, i) => {
+      const tracks = Object.keys(audioTracks);
+      btn.classList.toggle('active', tracks[i] === trackName);
+    });
+  }
+
+  function deleteOneStar() {
+    if (selectedIndex !== null) {
+      starsData.splice(selectedIndex, 1);
+      localStorage.setItem("langit_stars_v2", JSON.stringify(starsData));
+      closePopup();
+      renderStars();
+    }
+  }
+
+  function closePopup() { document.getElementById("overlay").style.display = "none"; }
+
+  function sendHug() {
+    if (selectedIndex === null) return;
+    const allStars = document.querySelectorAll('.star');
+    const targetStar = allStars[selectedIndex];
+    if (!targetStar) return;
+    const rect = targetStar.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) {
+      const particle = document.createElement("div");
+      particle.className = "hug-particle";
+      particle.style.width = (Math.random() * 5 + 3) + "px";
+      particle.style.height = particle.style.width;
+      particle.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 20) + "px";
+      particle.style.top = (rect.top + rect.height / 2 + (Math.random() - 0.5) * 20) + "px";
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 1500);
+    }
+    alert("Pelukan terkirim! Semoga pesanmu sampai.");
+    closePopup();
+  }
+
+  setInterval(createShootingStar, 8000);
+  function createShootingStar() {
+    const s = document.createElement("div");
+    s.className = "shooting-star";
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.top = Math.random() * 20 + "vh";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 4000);
+  }
+
+  renderStars();
+</script>
+
+</body>
+</html>
